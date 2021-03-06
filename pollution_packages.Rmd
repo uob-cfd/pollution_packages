@@ -8,12 +8,7 @@ In this notebook we cover:
 * How to install R *packages*.
 * Making plots with regression lines.
 * Dealing with dates and times.
-* (Optional) Averaging over time periods.
-
-The last part of this notebook is optional, starting at "Getting fancy with
-dates and times".  Please feel free to have a go at those final sections if you
-have time and / or interest.  We won't assess your "best effort" on that last
-part of the notebook.
+* Averaging over time periods.
 
 ## London pollution dataset
 
@@ -60,9 +55,9 @@ We will come onto the date soon.
 
 ## Packages
 
-R has a huge number of *packages*.  Packages are collections of code
-that integrate with R, and so give you more functions to work with many
-forms of data.
+R has a huge number of *packages*.  Packages are collections of code that
+integrate with R, and so give you more functions to work with many forms of
+data.
 
 In your R life, you will find yourself using packages very often.  Among the
 things that packages can do for you, are reading data in almost any format you
@@ -81,11 +76,11 @@ column in our data frame.  These are:
 
 There are two typical steps to using a package in R.
 
-1. *Install* the package using the `install.packages` function.  You need to do
-   this only once for a particular installation of R.  This means that, until
-   you install another, new copy of R on your computer, you don't need to run
-   `install.packages` again for a package you have already installed. If you
-   want to use a package, you always have to install it.
+1. *Install* the package using the `install.packages` function.  You need to
+   do this only once for a particular installation of R.  This means that,
+   until you install another, new copy of R on your computer, you don't need
+   to run `install.packages` again for a package you have already installed.
+   If you want to use a package, you always have to install it.
 2. *Use* the package using `library(my_package_name)`.  You do this once in
    each notebook or R session, before you use the functions from the package.
    This is the typical way of using a package, but there are other ways.
