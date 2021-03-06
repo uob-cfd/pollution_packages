@@ -1,0 +1,738 @@
+---
+title: "Pollution, plotting and packages"
+output: html_notebook
+---
+
+In this notebook we cover:
+
+* How to install R *packages*.
+* Making plots with regression lines.
+* Dealing with dates and times.
+* (Optional) Averaging over time periods.
+
+The last part of this notebook is optional, starting at "Getting fancy with
+dates and times".  Please feel free to have a go at those final sections if you
+have time and / or interest.  We won't assess your "best effort" on that last
+part of the notebook.
+
+## London pollution dataset
+
+Our example dataset records various air quality measures from the Marylebone
+Road, in London:
+
+```{r}
+# Run this chunk.
+# "london_df" is the London dataset data frame.
+london_df <- read.csv('air_pollution_hourly_98-05_london.csv')
+# Show the first six rows.
+head(london_df)
+```
+
+The first six rows show you that the dates start in 1998.  Now show the *last* six rows to see when the dates end:
+
+```{r}
+#- Show the last six rows of london_df
+...
+```
+
+You should find that these last rows have dates from 2005.
+
+Check the structure of the `london_df` data frame using the `str` function:
+
+```{r}
+str(...)
+```
+
+The data frame has the following columns:
+
+* `date` : the date of the recording, as a UK formatted date string.
+* `ws`: wind speed.
+* `wd`: wind direction in degrees.
+* `nox`: nitrogen oxides.
+* `no2`: nitrogen dioxide.
+* `o3`: ozone.
+* `pm10`: 2.5 - 10 micrometer particulate level.
+* `so2`: sulphur dioxide.
+* `co`: carbon monoxide.
+* `pm25`: >2.5 micrometer particulate level.
+
+We will come onto the date soon.
+
+## Packages
+
+R has a huge number of *packages*.  Packages are collections of code
+that integrate with R, and so give you more functions to work with many
+forms of data.
+
+In your R life, you will find yourself using packages very often.  Among the
+things that packages can do for you, are reading data in almost any format you
+can imagine, adding powerful tools for plotting, filtering, and rearranging
+data, and implementing a vast array of statistical tests.
+
+For this tutorial, you need two packages to make the best use of the `date`
+column in our data frame.  These are:
+
+* The [lubridate](https://lubridate.tidyverse.org) package to "Make
+  Dealing with Dates a Little Easier".  Lubridate has very useful
+  functions for processing dates, as you will soon see below.
+* The [xts](https://cran.r-project.org/web/packages/xts) package.  XTS stands
+  for eXtensible Time Series. The `xts` package provides many useful functions
+  for dealing with data like ours, that have dates and times.
+
+There are two typical steps to using a package in R.
+
+1. *Install* the package using the `install.packages` function.  You need to do
+   this only once for a particular installation of R.  This means that, until
+   you install another, new copy of R on your computer, you don't need to run
+   `install.packages` again for a package you have already installed. If you
+   want to use a package, you always have to install it.
+2. *Use* the package using `library(my_package_name)`.  You do this once in
+   each notebook or R session, before you use the functions from the package.
+   This is the typical way of using a package, but there are other ways.
+
+Let's start by doing that routine for the Lubridate package.
+
+First you run `install.packages` using something like the chunk below.
+
+**Don't run the chunk yet**.
+
+Notice that the package name goes in between quotes -- 'lubridate' --- to tell
+R that this is a piece of text --- in this case, the name of the package we
+want R to fetch from the web and install on our computer.
+
+Now run the chunk below:
+
+```{r}
+install.packages('lubridate')
+```
+
+You should see various bits of output as R goes to get the package from the
+web, then builds it into something it can use on this computer.
+
+Much of this output is red text; this is normal. But, **Call us over if you get
+an error**.
+
+After this is finished you should be able to run the following chunk.  This
+makes the Lubridate package available to the rest of the R session in the
+notebook.
+
+```{r}
+library(lubridate)
+```
+
+**Ignore any warnings** that you get about `masked` objects, they are normal.
+
+**Call us for help if you get an error**.
+
+Notice that in the code above, `lubridate` is *not* between quotes. This is
+because, after you installed the package, R knows that the name `lubridate`
+refers to the package.
+
+Now make sure that all is working by trying a function from the Lubridate
+package.  One of the functions in the Lubridate package is
+[parse_date_time](https://lubridate.tidyverse.org/reference/parse_date_time.html).
+
+Run the following chunk that uses `parse_date_time` to convert some text into
+an R date value (more on this later):
+
+```{r}
+a_date <- parse_date_time('20-02-14 14:00', 'ymd-HM')
+a_date
+```
+
+**Call us for help if you get an error**.
+
+Now your turn.  Later in this notebook, you will also need the `xts` package.
+
+Remember, there are two steps:
+
+1. *Install* (once for each installation of the R language).
+2. *Use* (once for each notebook / R sessions).
+
+Look at the chunks above for inspiration, where we installed and then used the `lubridate` package.
+
+First the install:
+
+```{r}
+#- Use install.packages to install the 'xts' package.
+...
+```
+
+Next use the package:
+
+```{r}
+#- Use the library function to use the xts package in this R notebook
+#- session.
+...
+```
+
+Ignore any warnings that you get about `masked` objects, they are normal.
+
+Finally, the chunk below tests that everything went OK with your `xts`
+installation, and your `library` function call above.  The chunk use the
+`is.xts` function from the `xts` package to tell you whether `a_date` (see
+above) is an eXtensible Time Series (it isn't).  Run the chunk to confirm that
+`xts` is properly installed.  It should show FALSE.
+
+```{r}
+# Run this chunk.
+is.xts(a_date)
+```
+
+## A note for Windows users
+
+Windows makes things a little harder to install packages.  For some packages -
+**not the ones above** - you will need a system called RTools.  See [this
+RTools page](https://cran.r-project.org/bin/windows/Rtools) for instructions
+on installing RTools.
+
+**You do not need to install RTools for this notebook**, but you may want to
+install it when you try installing R packages other than the ones here -
+packages other than `lubridate` and `xts`.
+
+## Labels for plots
+
+Returning to the dataset, we might first want to look at the histogram of `nox`
+values:
+
+```{r}
+#- Show a histogram of the "nox" column of "london_df".
+hist(...)
+```
+
+We are also going to be interested in the `pm25` values from this data frame.
+
+```{r}
+#- Show a histogram of the "pm25" values from the "london_df" data frame.
+...
+```
+
+These histograms are OK, for a default, but when we get to presenting data to
+someone else, we will want to make the labels more meaningful. First we might
+want to set the title.  We use the `main=` option to the plotting command, like
+this:
+
+```{r}
+hist(london_df$nox, main='Marylebone Road NOx levels')
+```
+
+The x-axis label is also a bit hard to read.  Tadaa! - we use the `xlab=`
+option to the plot command:
+
+```{r}
+hist(london_df$nox, main='Marylebone Road NOx levels', xlab='NOx level')
+```
+
+Show a histogram of the `pm25` column from `london_df`, with a suitable title
+(using `main=`) and x axis label (using `xlab=`)
+
+```{r}
+hist(...)
+```
+
+Sometimes these plot commands can get long, with many arguments.
+
+R allows us to spread a function call across many lines.  It knows all the
+lines are part of one function call, because of the opening `(` and closing `)`
+parentheses around the *arguments* to the function. The arguments are the
+things that go between the parentheses, separated by commas, to tell the
+function what to do.
+
+For example, I could spread the previous histogram function call over three
+lines, like this:
+
+```{r}
+# Spreading a function call over three lines.
+# The parentheses allow R to see that all three lines are for a single
+# function call.
+hist(london_df$nox,
+     main='Marylebone Road NOx levels',
+     xlab='NOx level')
+```
+
+Spread your histogram call for the `pm25` values (above) over three lines:
+
+```{r}
+#- Make a histogram of the "pm25" values with a title and x-axis label.
+#- Spread the function call over three lines.
+#- Don't forget the commas after each argument, between the brackets.
+hist(...
+     ...
+     ...)
+```
+
+## The same arguments work for many plot types
+
+We have so far been doing histograms, but the same options apply to scatter
+plots:
+
+```{r}
+# Plot of no2 against nox.
+# "main" and "xlab" arguments to a scatter plot.
+plot(london_df$nox, london_df$no2,
+     main='Marylebone Road NOx levels',
+     xlab='NOx level')
+```
+
+Now we have an ugly y-axis label.  You can guess what we need to do.
+
+```{r}
+# "main" and "xlab" and "ylab" arguments to a scatter plot.
+plot(london_df$nox, london_df$no2,
+     main='Marylebone Road NO2 against NOx levels',
+     xlab='NOx level',
+     ylab="NO2 level")
+```
+
+Now use the `main` and `xlab` and `ylab` options to plot the `nox` values
+against the `pm25`, with suitable title, x and y axis labels.
+
+```{r}
+#- Plot nox on the x-axis and pm25 on the y axis.
+#- Use "main" and "xlab" and "ylab" arguments to a scatter plot.
+#- You might want to split your function call over several lines.
+plot(...)
+```
+
+## Drawing a regression line
+
+The plot of "nox" and "pm25" suggests there might be some sort of straight-line
+relationship between the two.
+
+We haven't covered how to find a "good" line for two sets of points, and there
+are different ways on deciding on a good line.  The most common way is called
+the *least squares* regression line.  This often appears on plots labeled
+humbly as a "trend line".
+
+We can define any line on a graph with an *intercept* and a *slope*.
+
+* The *intercept* is the value on the y axis where the line crosses the y axis.
+  It is therefore the value for the y axis when the corresponding x value is
+  zero.
+* The *slope* is the amount the y value goes up for every one unit increase in
+  x. The slope can be negative, in which case the y value goes down for every
+  one unit increase in x.
+
+The line, defined by the intercept and slope, gives a prediction for each
+y value, given the corresponding x value.
+
+This next paragraph is for information --- you will hear more about this in
+your statistics lectures.  The "best" line is the line that gives the best
+prediction of the y values, in some sense of "best". One common measure of
+"best" is called *least squares*.  The *least squares* line is the "best" line
+in the sense that it is the line that gives the smallest squared distance of
+the actual y values from the predicted y values given by the line.
+
+R was born to solve problems like this.  Here we calculate the *least squares*
+line using R's `lm` function.  `lm` stands for Linear Model.  In this case
+R works out the best *least squares* intercept and slope for the `nox` column
+data and the `pm25` column data.
+
+```{r}
+best_line <- lm(london_df$pm25 ~ london_df$nox)
+best_line
+```
+
+Notice the tilde `~`, and the order of the columns.  The `~` means "as
+a function of" so `lm(london_df$pm25 ~ london_df$nox)` asks R to find a Linear
+Model (straight line) that *predicts* the `pm25` values *as a function of* the
+`nox` values.  That is, it is a line predicting the y values (`pm25`), on the
+**left** as a function of the x values on the **right**.
+
+Notice too from the output that it has worked out the intercept and the slope.
+
+We can put this linear model line on the plot, using a function called `abline`
+--- like this:
+
+```{r}
+plot(london_df$nox, london_df$pm25)
+abline(best_line)
+```
+
+Now your turn.  First get the best line for the `pm10` values *as a function
+of* the `nox` values.  Remember which goes on the left and which on the right.
+
+```{r}
+best_pm10_line <- ...
+# Show the calculated line parameters.
+best_pm10_line
+```
+
+Now do a plot with the `nox` values on the x axis, and the `pm10` values on the
+y axis.  Add a title and labels for the two axes.   Add the line you have just
+calculated.
+
+```{r}
+#- Plot nox on the x-axis and pm10 on the y axis.
+#- Add title, x-axis and y-axis labels.
+#- Add the least squares line.
+plot(...)
+...
+```
+
+## Dates and times
+
+We often need to deal with datasets where the observations have dates and
+times.
+
+This pollution dataset is a typical example.
+
+```{r}
+# Show the first six rows of the pollution dataset.
+head(london_df)
+```
+
+The first column in this dataset is `date`.  In fact we can see that it is text
+that contains both a date and a time in hours:minutes.
+
+As usual, when R reads in the data with `read.csv`, it finds that the first
+column looked like text (characters), and makes it into a `factor`.  We can see
+this is the case with `str`:
+
+```{r}
+str(london_df)
+```
+
+Show the *first six* levels of the factor contained in the `date` column of
+`london_df`.
+
+**Hint** : You know how to show the levels of a factor.  Remember how we show
+the first six of anything?
+
+```{r}
+head(...)
+```
+
+The factor in `london_df$date` is a pretty useless factor, because each
+observation is one level. This must be so, because all the date / time values
+are unique.  Here we use the `nrow` function to show the number of rows in the
+data frame.
+
+```{r}
+nrow(london_df)
+```
+
+Notice that this is also the first value we get back from the `dim` function,
+that you may remember from the tutorials:
+
+```{r}
+dim(london_df)
+```
+
+You can see that the number of rows in the data frame is the same as the number
+of levels in the factor, listed from `str` above.
+
+One problem with this huge factor, is that it is very inconvenient to do plots
+against date and time.  You might think of trying it now, but R will get stuck
+for a while, while it tries to deal with the factor having many thousands of
+levels.
+
+We would like to make `date` into something more useful than this enormous
+factor.
+
+It is probably not surprising to you, that R has functions for converting
+between factors (which is what we have now) and character strings, and
+functions for converting character strings to something that can represent
+a date and time.
+
+To start, let's first convert the nasty factor back into character strings, as
+the values were in the original file.
+
+To do this, I force the values to be characters, with the R `as.character`
+function, and put them back into the data frame column:
+
+```{r}
+# Set the date column to be bits of text (character strings).
+london_df$date <- as.character(london_df$date)
+head(london_df$date)
+```
+
+Show what type of values `date` contains now, using `str`:
+
+```{r}
+...
+```
+
+We want to convert these character strings into something R understands as
+a date and a time.  You may remember we used the Lubridate function
+`parse_date_time` for this.  Here is the example from further up the notebook.
+
+
+```{r}
+a_date <- parse_date_time('20-02-14 14:00', 'ymd-HM')
+a_date
+```
+
+If you look at the [documentation for
+parse_date_time](https://lubridate.tidyverse.org/reference/parse_date_time.html),
+you will see that we need to pass at least two things to the `parse_date_time`
+function. The first is the bit of text, or vector of bits of text, that we
+want to convert into dates.  This is called `x` in the documentation.  The
+second is something called `orders`.   It specifies the order in which the
+various parts of the date and time occur in the string.
+
+Here is another version of the example above.  The only difference is that we
+first put the text into a variable `my_date_str` and then convert that text
+into an R date.
+
+```{r}
+# Run this chunk.  Don't change it.
+my_date_str <- '20-02-14 14:00'
+a_date <- parse_date_time(my_date_str, 'ymd-HM')
+# Show the resulting R date.
+a_date
+```
+
+In this example, we said that the text "20-02-14 14:00" (from the variable
+`my_date_str`) had *order* "ymd-HM". This means that the first thing in the
+text is the Year ('y'), the second thing is the Month ('m') and the third
+thing is the Day ('d'). After that we have the Hour ("H") and the Minute
+("M").
+
+But now - what if I meant to say that "20-02-14" actually meant the 20th of
+February 2014 (but I still meant the time to be 14:00).  How would I change
+"order" to do that?
+
+```{r}
+#- Change the "order" argument below to tell parse_date_time
+#- that 20 is the day of the month, and 14 is the year.
+#- If you get an error "object 'my_date_str' not found", make
+#- sure you have run the chunk above this one.
+another_date <- parse_date_time(my_date_str, 'ymd-HM')
+# Show the new date.
+# If you got this right, you should see the year is 2014.
+another_date
+```
+
+These are the codes for parts of the date and time that you have seen:
+
+* `d` meaning two-digit number for day of the month.
+* `m` as two-digit number of month of the year.
+* `y` for two-digit number of year of the century.
+* `H` for two-digit hour.
+* `M` for two-digit minute.
+
+You can see all the character codes in the documentation for the R function
+[strptime](https://rdrr.io/r/base/strptime.html).  Notice the codes can have
+`%` in front of them, if you like, and as they do in that documentation. So,
+the following chunk is the same as the example you have already seen:
+
+```{r}
+# With the order codes having percents in front - same thing as without.
+a_date_again <- parse_date_time('20-02-14 14:00', '%y%m%d-%H%M')
+a_date_again
+```
+
+Notice too that the result of `parse_date_time` is a new type of thing,
+`POSIXct POSIXt`, where the final 't' stands for Time.  This is one of R's ways
+of storing a date and time.
+
+```{r}
+class(a_date)
+```
+
+As you will soon see, this type of thing is much more useful to us, because we
+can do fancy things like plot values over time.
+
+## Using dates and times
+
+We have found that we could convert the dates in the given format with
+`parse_date_time`.
+
+We want to convert the date characters in `london_df$date` into proper R dates.
+
+To start with, let's play with an example string, by getting the first value in
+the `london_df` `date` column:
+
+```{r}
+first_date_string <- london_df$date[1]
+first_date_string
+```
+
+We confirm this is text (characters) with `class`:
+
+```{r}
+class(first_date_string)
+```
+
+Here the first number refers to the day of the month, the second to the month
+of the year, and the third to the year, followed by the hour and minutes.
+
+Use `parse_date_time` and a suitable `order` to convert `first_date_time` to an
+R date:
+
+```{r}
+first_date <- parse_date_time(first_date_string, ...)
+# Show the date.
+first_date
+```
+
+You should see that the year for this date is 1998.
+
+In fact, we can do this all in one shot, using R's idea about using *vectors*.
+Fill in the correct value for `order` and run this chunk to convert all the
+bits of text in the `london_df$date` column into proper R dates:
+
+```{r}
+london_df$date <- parse_date_time(london_df$date, ...)
+# Show the first six rows.
+head(london_df)
+```
+
+We can now use these dates for plotting.
+
+Plot the dates in the `date` column of `london_df` on the x axis with the
+values from the `pm10` column on the y axis.  Add a title and an x axis label
+and a y axis label.
+
+```{r}
+plot(...)
+```
+
+## Getting fancy with dates and times
+
+**This part of the notebook, and everything following, is optional for your
+assessment**.
+
+The trick for using dates to their best potential is to make our data into
+a *timeseries*.
+
+In particular, we are going to use the specialized `xts` R *package* to make
+useful timeseries.
+
+An Xts time series consists of two things:
+
+* A vector of dates or date / times, called the *index*
+* A *matrix* of data where each row corresponds to the matching row in the
+  index.
+
+A *matrix* in R is like a data frame, in that it has rows and columns, but
+unlike a data frame, all the values have to be of the same type (such as number
+or string or date).
+
+That's all you need about matrices for now. In this tutorial you can follow the
+steps here to make an Xts time series.
+
+First we need the number of columns in the data frame.  We can get this using
+`dim`, like this:
+
+```{r}
+dim(london_df)[2]
+```
+
+This gives us the second value returned from `dim`, which is the number of
+columns.  We can also use the `ncol` function, like this:
+
+```{r}
+ncol(london_df)
+```
+
+We convert the last 9 columns in the data frame into a *matrix*.
+
+```{r}
+# A matrix of data. This has all rows, and all columns except the first.
+# Number of columns.
+n_cols <- ncol(london_df)
+# Data frame without the first column.
+df_without_first_col <- london_df[,2:n_cols]
+# Data frame converted to matrix
+data <- as.matrix(df_without_first_col)
+head(data)
+```
+
+Show the type (class) of this new thing `data`:
+
+```{r}
+...
+```
+
+We had to drop the first column of `london_df`, because the first column
+contains dates.  Remember that matrices must contain data of the same type.  If
+we had left in the first column, before converting to a matrix, R makes
+everything into a character string, because that's the only type that works for
+all the dates and the numbers.
+
+```{r}
+# Convert the original data frame, including the first column.
+ugly_matrix <- as.matrix(london_df)
+head(ugly_matrix)
+```
+
+Now we can make the Xts object from the *index* and the *matrix*:
+
+```{r}
+# The Xts object.
+london_ts <- xts(data, london_df$date)
+head(london_ts)
+```
+
+Don't worry about the warning about the timezone being different from the
+current timezone.
+
+The extended timeseries allows us to make even nicer plots, where the plots
+know about the dates, and where the dates go on the x-axis by default.
+
+```{r}
+plot(london_ts$nox)
+```
+
+```{r}
+plot(london_ts$o3)
+```
+
+But we can also *aggregate* over days and months and years.  Xts has some nice
+functions for this:
+
+```{r}
+by_month <- apply.monthly(london_ts, mean, na.rm=TRUE)
+head(by_month)
+```
+
+```{r}
+plot(by_month$nox)
+```
+
+```{r}
+by_year <- apply.yearly(london_ts, mean, na.rm=TRUE)
+head(by_year)
+```
+
+```{r}
+plot(by_year$nox)
+```
+
+```{r}
+plot(by_year$o3)
+```
+
+## Your turn
+
+You will need to guess or web-search or read the help on xts to work out what
+function you need to aggregate by day.
+
+```{r}
+#- Aggregate "london_ts" by day, to get the mean pollution level
+#- on each day.
+by_day <- ...
+# Show the first six observations
+head(by_day)
+```
+
+```{r}
+#- Plot the PM10 levels from the daily aggregation above.
+plot(...)
+```
+
+## The end
+
+That's it.  **You don't need to submit this notebook**.  But - for practice,
+please consider doing the submission checks that you will also do for your
+homework.  Specifically: make sure that all the chunks execute correctly.  To
+do that, go to the Run button at the top of the notebook, and click "Restart R
+and Clear Output".  Then go to the top of the notebook, and run each chunk in
+turn, to make sure that they run without error, and give you the output you
+expect.  *Remember, for your homework, we going to run an automated marking
+script over this file, so it has to execute correctly, for you to get the
+marks*.
+
+But **please don't submit this notebook, it's just for practice**.
